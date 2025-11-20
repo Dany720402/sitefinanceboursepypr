@@ -26,7 +26,8 @@ import yfinance as yf
 app = Flask(__name__)
 app.secret_key = "secret_key"
 
-
+# Votre clé API Alpha Vantage
+API_KEY = "AQDTHEZQ6DY64JB3"
 
 @app.route('/user/<username>')
 def user_profile(username):
@@ -154,7 +155,7 @@ def update_prix_action_actuel(noportefeuille):
 
         # Configuration
         db_path = "saab.db"  # Chemin vers la base de données
-        alpha_vantage_api_key = "NGX0L4KU016GOFDY"  # Remplacez par votre clé API Alpha Vantage
+        alpha_vantage_api_key = API_KEY  # Remplacez par votre clé API Alpha Vantage
         base_url = "https://www.alphavantage.co/query"
 
 
@@ -226,8 +227,7 @@ def update_prix_action_actuel(noportefeuille):
 
 
 
-# Votre clé API Alpha Vantage
-API_KEY = "NGX0L4KU016GOFDY"
+
 
 @app.route('/nouvelles/', methods=['GET', 'POST'])
 def market_news():
@@ -947,7 +947,7 @@ def graphic2():
         error_message = "Erreur : Aucun symbole d'action fourni."
         return render_template('graphiquepredictionIA.html', stock_symbol=stock_symbol, error_message=error_message)
 
-    ALPHA_VANTAGE_API_KEY = 'AQDTHEZQ6DY64JB3'
+    ALPHA_VANTAGE_API_KEY = API_KEY
     FUNCTION = 'TIME_SERIES_DAILY_ADJUSTED'
     url = f'https://www.alphavantage.co/query?function={FUNCTION}&symbol={stock_symbol}&apikey={ALPHA_VANTAGE_API_KEY}&datatype=csv'
 
@@ -1027,7 +1027,7 @@ def graphic2():
 @app.route('/graphique/')
 def graphic():
     stock_symbol = request.args.get('stock_symbol')
-    ALPHA_VANTAGE_API_KEY = 'TQXI3APYZZA55UK5'
+    ALPHA_VANTAGE_API_KEY = API_KEY
     FUNCTION = 'TIME_SERIES_DAILY'
 
     url = f'https://www.alphavantage.co/query?function={FUNCTION}&symbol={stock_symbol}&apikey={ALPHA_VANTAGE_API_KEY}&datatype=csv'
@@ -1090,7 +1090,7 @@ def graphic():
 @app.route('/resultday/')
 def result():
     stock_symbol1 = 'CLS.TO'
-    ALPHA_VANTAGE_API_KEY1 = 'TQXI3APYZZA55UK5'
+    ALPHA_VANTAGE_API_KEY1 = API_KEY
     FUNCTION1 = 'TIME_SERIES_DAILY'
 
     url = f'https://www.alphavantage.co/query?function={FUNCTION1}&symbol={stock_symbol1}&apikey={ALPHA_VANTAGE_API_KEY1}'
@@ -1160,7 +1160,7 @@ def int_api():
 def graphique2():
     stock_symbol1 = request.args.get('stock_symbol')
    # ALPHA_VANTAGE_API_KEY1 = 'TQXI3APYZZA55UK5'
-    ALPHA_VANTAGE_API_KEY1 = 'NGX0L4KU016GOFDY'
+    ALPHA_VANTAGE_API_KEY1 = API_KEY
     FUNCTION1 = 'TIME_SERIES_MONTHLY'
 
     url = f'https://www.alphavantage.co/query?function={FUNCTION1}&symbol={stock_symbol1}&outputsize=compact&apikey={ALPHA_VANTAGE_API_KEY1}'
@@ -1203,23 +1203,41 @@ def graphique2():
 def saisie_symbole():
     return render_template('saisie-symbole.html')
 
+
 @app.route('/overview/', methods=["GET"])
 def overview1():
-    # Exemple : Shopify (SHOP.TO) sur la Bourse de Toronto
     nosymbol = request.args.get("stock_symbol")
-    ticker = yf.Ticker(nosymbol)
-    info = ticker.fast_info
 
-    # Récupération des données
-    nom = info.get("longName", "N/A")
-    secteur = info.get("sector", "N/A")
-    industrie = info.get("industry", "N/A")
-    description = info.get("longBusinessSummary", "N/A")
-    site_web = info.get("website", "#")
-    pays = info.get("country", "N/A")
-    monnaie = info.get("currency", "N/A")
+    if not nosymbol:
+        return "<h1>Erreur : aucun symbole fourni.</h1>"
 
-    # Construction du HTML
+    params = {
+        "function": "OVERVIEW",
+        "symbol": nosymbol,
+        "apikey": API_KEY
+    }
+
+    try:
+        r = requests.get(ALPHA_VANTAGE_URL, params=params)
+        data = r.json()
+
+        # Alpha Vantage renvoie parfois une "Note" quand la limite est atteinte
+        if "Note" in data:
+            return "<h1>Limite d'API Alpha Vantage atteinte. Réessayez plus tard.</h1>"
+
+        # Récupération des infos
+        nom = data.get("Name", "N/A")
+        secteur = data.get("Sector", "N/A")
+        industrie = data.get("Industry", "N/A")
+        description = data.get("Description", "N/A")
+        site_web = data.get("Website", "#")
+        pays = data.get("Country", "N/A")
+        monnaie = data.get("Currency", "N/A")
+
+    except Exception as e:
+        return f"<h1>Erreur lors de la récupération des données : {e}</h1>"
+
+    # Construction du HTML (on garde ton design existant)
     html_content = f"""
     <!DOCTYPE html>
     <html lang="fr">
@@ -1227,9 +1245,9 @@ def overview1():
         <meta charset="UTF-8">
         <title>Overview - {nom}</title>
          <!-- Inclusion de Bootstrap CSS -->
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Ajout d'une icônographie via FontAwesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+        <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+        <!-- Ajout d'une icônographie via FontAwesome -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
         <style>
         body {{
                 font-family: Arial, sans-serif;
@@ -1276,8 +1294,6 @@ def overview1():
             background-color: #0056b3;
             border-color: #004085;
          }}
-            
-            
         </style>
     </head>
     <body>
@@ -1321,7 +1337,7 @@ def overview1():
                     </a>
                 </div>
             </div>
-  
+
         <div class="container">
             <h1>{nom}</h1>
             <p><strong>Secteur :</strong> {secteur}</p>
@@ -1331,8 +1347,8 @@ def overview1():
             <p><strong>Monnaie :</strong> {monnaie}</p>
             <p><strong>Site Web :</strong> <a href="{site_web}" target="_blank">{site_web}</a></p>
         </div>
-        
-        
+
+
         <!-- Inclusion de Bootstrap JS, Popper.js et jQuery -->
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
@@ -1342,6 +1358,7 @@ def overview1():
     """
 
     return Response(html_content, mimetype='text/html')
+
 
 @app.route('/graphiquesunset/')
 def graphiquesunset1():
@@ -1435,7 +1452,7 @@ def total_portefeuille2():
             conn.close()
 
 
-ALPHA_VANTAGE_API_KEY = "NGX0L4KU016GOFDY"
+ALPHA_VANTAGE_API_KEY = API_KEY
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
 
@@ -1548,21 +1565,51 @@ def total_portefeuillegraphique():
 
 # Comparaison portefeuille et TSX
 
-ALPHA_VANTAGE_API_KEY3 = "NGX0L4KU016GOFDY"
-TSX_SYMBOL = "TSX:SPTSX"  # Remplacez par le bon symbole
+# Comparaison portefeuille et TSX avec Alpha Vantage
 
-import yfinance as yf
+ALPHA_VANTAGE_API_KEY3 = API_KEY
+ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
+
+# ETF qui suit le TSX (proxy pour l'indice TSX)
+TSX_SYMBOL = "XIC.TO"  # tu peux changer pour un autre ETF si tu veux
+
 
 def get_tsx_rendement():
-    tsx = yf.Ticker("^GSPTSE")
-    hist = tsx.history(start="2025-01-01", end="2025-03-05")
-    if hist.empty:
-        print("Pas de données disponibles.")
-        return 0
-    start_price = hist['Close'].iloc[0]
-    end_price = hist['Close'].iloc[-1]
-    rendement = ((end_price - start_price) / start_price) * 100
-    return rendement
+    """
+    Calcule le rendement du TSX (via un ETF comme XIC.TO) entre la
+    première date dispo et la dernière dans les données renvoyées.
+    """
+
+    params = {
+        "function": "TIME_SERIES_DAILY_ADJUSTED",
+        "symbol": TSX_SYMBOL,
+        "apikey": ALPHA_VANTAGE_API_KEY3
+    }
+
+    try:
+        r = requests.get(ALPHA_VANTAGE_URL, params=params)
+        data = r.json()
+
+        time_series = data.get("Time Series (Daily)")
+        if not time_series:
+            print("Pas de données TSX/ETF disponibles :", data)
+            return None
+
+        # Trier les dates dans l'ordre chronologique
+        dates = sorted(time_series.keys())
+        start_date = dates[0]
+        end_date = dates[-1]
+
+        start_price = float(time_series[start_date]["4. close"])
+        end_price = float(time_series[end_date]["4. close"])
+
+        rendement = ((end_price - start_price) / start_price) * 100
+        return rendement
+
+    except Exception as e:
+        print(f"Erreur dans get_tsx_rendement : {e}")
+        return None
+
 
 
 
@@ -1601,9 +1648,16 @@ def total_portefeuille3():
         gaintotal = total_global_actuel - total_global
         rendement = (gaintotal / total_global) * 100 if total_global > 0 else 0
 
+
         # Récupération du rendement du TSX via Alpha Vantage
         tsx_rendement = get_tsx_rendement()
-        comparaison = "Surperformance" if rendement > tsx_rendement else "Sous-performance"
+
+        if tsx_rendement is None:
+            comparaison = "Comparaison impossible (données TSX indisponibles)"
+            tsx_rendement = 0  # pour éviter des erreurs dans le template
+        else:
+            comparaison = "Surperformance" if rendement > tsx_rendement else "Sous-performance"
+
 
         return render_template(
             "totalportefeuille3.html",
@@ -1629,7 +1683,7 @@ def total_portefeuille3():
 #ALERT BOURSE
 
 # 📌 Clé API Alpha Vantage
-API_KEY = "NGX0L4KU016GOFDY"  # Remplace par ta clé API Alpha Vantage
+#API_KEY = "NGX0L4KU016GOFDY"  # Remplace par ta clé API Alpha Vantage
 
 # 📌 Paramètres d'alerte (modifiables par l'utilisateur)
 stock_symbol = "DOL.TO"  # Symbole par défaut (Dollarama)
