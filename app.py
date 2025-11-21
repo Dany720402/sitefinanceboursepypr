@@ -1582,7 +1582,7 @@ ALPHA_VANTAGE_API_KEY7 = API_KEY
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
 # ETF Canada GRATUIT chez Alpha Vantage
-#TSX_SYMBOL = "EWC"
+TSX_SYMBOL = "EWC"
 
 
 def get_tsx_rendement():
@@ -1627,60 +1627,55 @@ def get_tsx_rendement():
 
 
 
+
+
 import yfinance as yf
 
-# ================================
-# Comparaison portefeuille vs TSX
-# ================================
 
-# On utilise l'indice TSX directement via Yahoo Finance
-#TSX_SYMBOL = "^GSPTSE"   # indice TSX complet
-TSX_SYMBOL = "XIC.TO"
-# Petit cache mémoire pour éviter de taper Yahoo à chaque requête
+#print(yf.Ticker("XIC.TO").history(period="1mo"))
+
+from yfinance.exceptions import YFRateLimitError
+
 _tsx_cache = {
-    "value": None,       # dernier rendement calculé
-    "timestamp": None    # moment où on l'a récupéré
+    "value": None,
+    "timestamp": None,
 }
 
 def get_tsx_rendement_yahoo():
-    """
-    Calcule le rendement du TSX (indice ^GSPTSE via Yahoo Finance)
-    sur la dernière année environ.
-
-    On met en cache le résultat pendant 10 minutes pour éviter
-    les erreurs de type YFRateLimitError (Too Many Requests).
-    """
+    """Rendement du TSX (XIC.TO) sur ~1 an, avec cache et gestion du rate limit."""
     now = datetime.datetime.now(datetime.UTC)
 
-    # 1) Si on a déjà une valeur récente (moins de 10 min), on la réutilise
+    # 1) Utiliser le cache si < 10 minutes
     if _tsx_cache["value"] is not None and _tsx_cache["timestamp"] is not None:
         delta = (now - _tsx_cache["timestamp"]).total_seconds()
-        if delta < 600:  # 600 sec = 10 minutes
+        if delta < 600:  # 10 minutes
             return _tsx_cache["value"]
 
     try:
-        # 2) Appel à Yahoo Finance (moins agressif que download)
-        ticker = yf.Ticker(TSX_SYMBOL)
-        hist = ticker.history(period="1y")   # historique sur 1 an
+        tsx = yf.Ticker("XIC.TO")  # ou "^GSPTSE" si tu préfères l'indice
+        hist = tsx.history(period="1y")   # plus simple que start/end fixes
 
         if hist.empty:
-            print(f"⚠ Aucune donnée reçue de Yahoo Finance pour {TSX_SYMBOL}")
-            return _tsx_cache["value"]
+            print("⚠ Aucune donnée Yahoo Finance pour XIC.TO")
+            return _tsx_cache["value"]  # éventuellement None
 
         start_price = float(hist["Close"].iloc[0])
         end_price   = float(hist["Close"].iloc[-1])
-
         rendement = ((end_price - start_price) / start_price) * 100
 
-        # 3) Mise à jour du cache et retour
+        # Mise à jour du cache
         _tsx_cache["value"] = rendement
         _tsx_cache["timestamp"] = now
 
-        print(f"Rendement TSX (Yahoo) calculé : {rendement:.2f}%")
+        print(f"Rendement TSX (Yahoo) : {rendement:.2f}%")
         return rendement
 
+    except YFRateLimitError:
+        # Trop de requêtes : on ne plante pas, on réutilise l’ancienne valeur
+        print("⚠ Rate limit Yahoo Finance (Too Many Requests). On réutilise la valeur en cache si disponible.")
+        return _tsx_cache["value"]
+
     except Exception as e:
-        # En cas d'erreur (rate limit ou autre), on log et on renvoie l'ancienne valeur si dispo
         print("⚠ Erreur Yahoo Finance TSX :", e)
         return _tsx_cache["value"]
 
