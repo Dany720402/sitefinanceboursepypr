@@ -16,18 +16,30 @@ import sqlite3
 import datetime
 
 #Notification en temps réel
-import threading
-import time
-from flask_sse import sse
-import redis
+#import threading
+#import time
+#from flask_sse import sse
+#import redis
 
-import yfinance as yf
+#import yfinance as yf
+
+import os
+
+
 
 app = Flask(__name__)
 app.secret_key = "secret_key"
 
 # Votre clé API Alpha Vantage
-API_KEY = "AQDTHEZQ6DY64JB3"
+#API_KEY = "AQDTHEZQ6DY64JB3"
+
+API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
+
+if not API_KEY:
+    raise RuntimeError("La variable d'environnement ALPHA_VANTAGE_API_KEY n'est pas définie.")
+
+
+
 
 @app.route('/user/<username>')
 def user_profile(username):
@@ -504,114 +516,114 @@ def market_news():
 
 # Initialisation de Flask et Redis
 #app = Flask(__name__)
-app.config["REDIS_URL"] = "redis://localhost:6379"
-app.register_blueprint(sse, url_prefix="/stream")  # SSE pour notifications
+#app.config["REDIS_URL"] = "redis://localhost:6379"
+#app.register_blueprint(sse, url_prefix="/stream")  # SSE pour notifications
 
 # Fonction pour surveiller le portefeuille et envoyer des alertes
-def surveiller_portefeuille():
-    while True:
-        try:
-            db_path = "saab.db"
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
+#def surveiller_portefeuille():
+#   while True:
+#        try:
+#            db_path = "saab.db"
+#            conn = sqlite3.connect(db_path)
+#            conn.row_factory = sqlite3.Row
+#            cursor = conn.cursor()
 
             # Récupérer tous les portefeuilles
-            cursor.execute("SELECT DISTINCT noportefeuille FROM detailportefeuille")
-            portefeuilles = cursor.fetchall()
+#            cursor.execute("SELECT DISTINCT noportefeuille FROM detailportefeuille")
+#            portefeuilles = cursor.fetchall()
 
 
            # print("Portefeuilles détectés :", [p["noportefeuille"] for p in portefeuilles])
 
 
-            for portefeuille in portefeuilles:
-                noportefeuille = portefeuille["noportefeuille"]
+#            for portefeuille in portefeuilles:
+#                noportefeuille = portefeuille["noportefeuille"]
 
                 # Récupérer les données actuelles
-                cursor.execute("""
-                SELECT nombreaction, prixaction, prixactionactuel
-                FROM detailportefeuille WHERE noportefeuille = ?
-                """, (noportefeuille,))
-                rows = cursor.fetchall()
+#                cursor.execute("""
+#                SELECT nombreaction, prixaction, prixactionactuel
+#                FROM detailportefeuille WHERE noportefeuille = ?
+#                """, (noportefeuille,))
+#                rows = cursor.fetchall()
 
-                total_ancien = sum(row["nombreaction"] * row["prixaction"] for row in rows)
-                total_actuel = sum(row["nombreaction"] * row["prixactionactuel"] for row in rows)
+#                total_ancien = sum(row["nombreaction"] * row["prixaction"] for row in rows)
+#                total_actuel = sum(row["nombreaction"] * row["prixactionactuel"] for row in rows)
 
-                if total_ancien > 0:
-                    rendement = ((total_actuel - total_ancien) / total_ancien) * 100
+#                if total_ancien > 0:
+#                    rendement = ((total_actuel - total_ancien) / total_ancien) * 100
 
-                    if abs(rendement) > 2:  # Seuil d'alerte à 2%
-                        message = f"📢 Le portefeuille {noportefeuille} a évolué de {rendement:.2f}%"
-                        print(f"Notification : {message}")
-                        with app.app_context():
-                            sse.publish({"message": message}, type='rendement')
+#                    if abs(rendement) > 2:  # Seuil d'alerte à 2%
+#                        message = f"📢 Le portefeuille {noportefeuille} a évolué de {rendement:.2f}%"
+#                        print(f"Notification : {message}")
+#                        with app.app_context():
+#                            sse.publish({"message": message}, type='rendement')
 
-            conn.close()
-        except Exception as e:
-            print(f"Erreur dans la surveillance : {e}")
+#            conn.close()
+#        except Exception as e:
+#            print(f"Erreur dans la surveillance : {e}")
 
-        time.sleep(10)  # Vérification toutes les 10 secondes
+#        time.sleep(10)  # Vérification toutes les 10 secondes
 
 # Lancer la surveillance dans un thread séparé
-threading.Thread(target=surveiller_portefeuille, daemon=True).start()
+#threading.Thread(target=surveiller_portefeuille, daemon=True).start()
 
-@app.route('/portefeuilleNotification/')
-def form_portefeuilleNotification():
-    return render_template('rendementNotification.html')
+#@app.route('/portefeuilleNotification/')
+#def form_portefeuilleNotification():
+#    return render_template('rendementNotification.html')
 
-@app.route("/total-portefeuilleNotification/", methods=["GET"])
-def total_portefeuilleNotification():
-    noportefeuille = request.args.get("noportefeuille")
-    db_path = "saab.db"
+#@app.route("/total-portefeuilleNotification/", methods=["GET"])
+#def total_portefeuilleNotification():
+#    noportefeuille = request.args.get("noportefeuille")
+#    db_path = "saab.db"
 
-    if not noportefeuille:
-        return "<h1>Erreur : Veuillez fournir un numéro de portefeuille.</h1>"
+#    if not noportefeuille:
+#        return "<h1>Erreur : Veuillez fournir un numéro de portefeuille.</h1>"
 
-    try:
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+#    try:
+#        conn = sqlite3.connect(db_path)
+#        conn.row_factory = sqlite3.Row
+#        cursor = conn.cursor()
 
-        query = """
-        SELECT id, symbolecompagnie, nomcompagnie, dateachat, nombreaction, prixaction, 
-        (nombreaction * prixaction) AS total,
-        (nombreaction * prixactionactuel) AS totalactuel
-        FROM detailportefeuille
-        WHERE noportefeuille = ?
-        """
-        cursor.execute(query, (noportefeuille,))
-        rows = cursor.fetchall()
+#        query = """
+#        SELECT id, symbolecompagnie, nomcompagnie, dateachat, nombreaction, prixaction,
+#        (nombreaction * prixaction) AS total,
+#        (nombreaction * prixactionactuel) AS totalactuel
+#        FROM detailportefeuille
+#        WHERE noportefeuille = ?
+#        """
+#        cursor.execute(query, (noportefeuille,))
+#        rows = cursor.fetchall()
 
-        total_global = sum(row["total"] for row in rows)
-        total_global_actuel = sum(row["totalactuel"] for row in rows)
-        gaintotal = total_global_actuel - total_global
-        rendement = (gaintotal / total_global) * 100 if total_global > 0 else 0
+#        total_global = sum(row["total"] for row in rows)
+#        total_global_actuel = sum(row["totalactuel"] for row in rows)
+#        gaintotal = total_global_actuel - total_global
+#        rendement = (gaintotal / total_global) * 100 if total_global > 0 else 0
 
-        return render_template(
-            "totalportefeuilleNotification.html",
-            rows=rows,
-            total_global=total_global,
-            total_global_actuel=total_global_actuel,
-            gaintotal=gaintotal,
-            rendement=rendement
-        )
-    except sqlite3.Error as e:
-        return f"<h1>Erreur avec la base de données : {e}</h1>"
-    finally:
-        if 'conn' in locals():
-            conn.close()
+#        return render_template(
+#            "totalportefeuilleNotification.html",
+#            rows=rows,
+#            total_global=total_global,
+#            total_global_actuel=total_global_actuel,
+#            gaintotal=gaintotal,
+#            rendement=rendement
+#        )
+#    except sqlite3.Error as e:
+#        return f"<h1>Erreur avec la base de données : {e}</h1>"
+#    finally:
+#        if 'conn' in locals():
+#            conn.close()
 
-@app.route('/stream')
-def stream():
-    return sse
+#@app.route('/stream')
+#def stream():
+#    return sse
 
 # Route pour tester les notifications
-@app.route("/envoyer-notification-test")
-def envoyer_notification_test():
-    message = "🚀 Test : mise à jour du portefeuille détectée !"
-    with app.app_context():
-        sse.publish({"message": message}, type='rendement')
-    return "Notification envoyée avec succès !"
+#@app.route("/envoyer-notification-test")
+#def envoyer_notification_test():
+#    message = "🚀 Test : mise à jour du portefeuille détectée !"
+#    with app.app_context():
+#        sse.publish({"message": message}, type='rendement')
+#    return "Notification envoyée avec succès !"
 
 
 
@@ -947,9 +959,9 @@ def graphic2():
         error_message = "Erreur : Aucun symbole d'action fourni."
         return render_template('graphiquepredictionIA.html', stock_symbol=stock_symbol, error_message=error_message)
 
-    ALPHA_VANTAGE_API_KEY = API_KEY
-    FUNCTION = 'TIME_SERIES_DAILY_ADJUSTED'
-    url = f'https://www.alphavantage.co/query?function={FUNCTION}&symbol={stock_symbol}&apikey={ALPHA_VANTAGE_API_KEY}&datatype=csv'
+    ALPHA_VANTAGE_API_KEY4 = API_KEY
+    FUNCTION = 'TIME_SERIES_DAILY'
+    url = f'https://www.alphavantage.co/query?function={FUNCTION}&symbol={stock_symbol}&apikey={ALPHA_VANTAGE_API_KEY4}&datatype=csv'
 
     try:
         response = requests.get(url)
@@ -1563,39 +1575,42 @@ def total_portefeuillegraphique():
 
 
 
-# Comparaison portefeuille et TSX
+
 
 # Comparaison portefeuille et TSX avec Alpha Vantage
-
-ALPHA_VANTAGE_API_KEY3 = API_KEY
+ALPHA_VANTAGE_API_KEY7 = API_KEY
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
-# ETF qui suit le TSX (proxy pour l'indice TSX)
-TSX_SYMBOL = "XIC.TO"  # tu peux changer pour un autre ETF si tu veux
+# ETF Canada GRATUIT chez Alpha Vantage
+#TSX_SYMBOL = "EWC"
 
 
 def get_tsx_rendement():
-    """
-    Calcule le rendement du TSX (via un ETF comme XIC.TO) entre la
-    première date dispo et la dernière dans les données renvoyées.
-    """
-
     params = {
-        "function": "TIME_SERIES_DAILY_ADJUSTED",
+        "function": "TIME_SERIES_DAILY",
         "symbol": TSX_SYMBOL,
-        "apikey": ALPHA_VANTAGE_API_KEY3
+        "outputsize": "full",   # correction ici !
+        "apikey": ALPHA_VANTAGE_API_KEY7
     }
 
     try:
         r = requests.get(ALPHA_VANTAGE_URL, params=params)
         data = r.json()
+        print("Réponse API TSX :", data)
+
+        if "Note" in data:
+            print("⚠ Limite d'appels API dépassée :", data["Note"])
+            return None
+
+        if "Error Message" in data:
+            print("⚠ Erreur API :", data["Error Message"])
+            return None
 
         time_series = data.get("Time Series (Daily)")
         if not time_series:
-            print("Pas de données TSX/ETF disponibles :", data)
+            print("⚠ Pas de 'Time Series (Daily)' :", data)
             return None
 
-        # Trier les dates dans l'ordre chronologique
         dates = sorted(time_series.keys())
         start_date = dates[0]
         end_date = dates[-1]
@@ -1610,6 +1625,64 @@ def get_tsx_rendement():
         print(f"Erreur dans get_tsx_rendement : {e}")
         return None
 
+
+
+import yfinance as yf
+
+# ================================
+# Comparaison portefeuille vs TSX
+# ================================
+
+# On utilise l'indice TSX directement via Yahoo Finance
+#TSX_SYMBOL = "^GSPTSE"   # indice TSX complet
+TSX_SYMBOL = "XIC.TO"
+# Petit cache mémoire pour éviter de taper Yahoo à chaque requête
+_tsx_cache = {
+    "value": None,       # dernier rendement calculé
+    "timestamp": None    # moment où on l'a récupéré
+}
+
+def get_tsx_rendement_yahoo():
+    """
+    Calcule le rendement du TSX (indice ^GSPTSE via Yahoo Finance)
+    sur la dernière année environ.
+
+    On met en cache le résultat pendant 10 minutes pour éviter
+    les erreurs de type YFRateLimitError (Too Many Requests).
+    """
+    now = datetime.datetime.now(datetime.UTC)
+
+    # 1) Si on a déjà une valeur récente (moins de 10 min), on la réutilise
+    if _tsx_cache["value"] is not None and _tsx_cache["timestamp"] is not None:
+        delta = (now - _tsx_cache["timestamp"]).total_seconds()
+        if delta < 600:  # 600 sec = 10 minutes
+            return _tsx_cache["value"]
+
+    try:
+        # 2) Appel à Yahoo Finance (moins agressif que download)
+        ticker = yf.Ticker(TSX_SYMBOL)
+        hist = ticker.history(period="1y")   # historique sur 1 an
+
+        if hist.empty:
+            print(f"⚠ Aucune donnée reçue de Yahoo Finance pour {TSX_SYMBOL}")
+            return _tsx_cache["value"]
+
+        start_price = float(hist["Close"].iloc[0])
+        end_price   = float(hist["Close"].iloc[-1])
+
+        rendement = ((end_price - start_price) / start_price) * 100
+
+        # 3) Mise à jour du cache et retour
+        _tsx_cache["value"] = rendement
+        _tsx_cache["timestamp"] = now
+
+        print(f"Rendement TSX (Yahoo) calculé : {rendement:.2f}%")
+        return rendement
+
+    except Exception as e:
+        # En cas d'erreur (rate limit ou autre), on log et on renvoie l'ancienne valeur si dispo
+        print("⚠ Erreur Yahoo Finance TSX :", e)
+        return _tsx_cache["value"]
 
 
 
@@ -1650,7 +1723,8 @@ def total_portefeuille3():
 
 
         # Récupération du rendement du TSX via Alpha Vantage
-        tsx_rendement = get_tsx_rendement()
+#        tsx_rendement = get_tsx_rendement()
+        tsx_rendement = get_tsx_rendement_yahoo()
 
         if tsx_rendement is None:
             comparaison = "Comparaison impossible (données TSX indisponibles)"
@@ -1736,5 +1810,5 @@ def set_alert():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, threaded=True)
+    app.run(debug=True)
 
