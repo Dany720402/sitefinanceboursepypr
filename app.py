@@ -1,19 +1,24 @@
-from flask import Flask,  Response, render_template_string, render_template, request, redirect, flash, jsonify, url_for, session
-
-import pandas as pd
+import matplotlib
 import numpy as np
-from sklearn.model_selection import train_test_split
+import pandas as pd
+import requests
+from flask import Flask, Response, render_template_string, render_template, request, redirect, flash, jsonify, url_for, \
+    session
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import PolynomialFeatures
-import requests
-import matplotlib
+
 matplotlib.use('Agg')  # Utiliser le backend 'Agg' pour les environnements sans interface graphique
 import matplotlib.pyplot as plt
 import io
 import base64
 import sqlite3
 import datetime
+
+
+import os
+from dotenv import load_dotenv
 
 #Notification en temps réel
 #import threading
@@ -23,16 +28,16 @@ import datetime
 
 #import yfinance as yf
 
-import os
-
-
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "secret_key"
 
-# Votre clé API Alpha Vantage
-API_KEY = "AQDTHEZQ6DY64JB3"
-#clé gratuite=33NR0TCPXQ79JEJE
+app.secret_key = os.environ["FLASK_SECRET_KEY"]
+
+API_KEY = os.environ["ALPHA_VANTAGE_API_KEY"]
+
+
+
 
 
 #API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
