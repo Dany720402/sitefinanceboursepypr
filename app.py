@@ -31,9 +31,11 @@ app = Flask(__name__)
 app.secret_key = "secret_key"
 
 # Votre clé API Alpha Vantage
-#API_KEY = "AQDTHEZQ6DY64JB3"
+API_KEY = "AQDTHEZQ6DY64JB3"
+#clé gratuite=33NR0TCPXQ79JEJE
 
-API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
+
+#API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
 
 if not API_KEY:
     raise RuntimeError("La variable d'environnement ALPHA_VANTAGE_API_KEY n'est pas définie.")
@@ -1630,10 +1632,6 @@ def get_tsx_rendement():
 
 
 import yfinance as yf
-
-
-#print(yf.Ticker("XIC.TO").history(period="1mo"))
-
 from yfinance.exceptions import YFRateLimitError
 
 _tsx_cache = {
